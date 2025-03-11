@@ -1,0 +1,618 @@
+{
+  "name": "GitHub BlogBot",
+  "nodes": [
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://127.0.0.1:11434/api/generate",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"phi4\",\n  \"prompt\": \"You are a professional blog writer. Your task is to take a list of tasks and generate a paragraph summarizing what I did, the skills involved, and the impact on me as a new-grad developer. Write this blog post from my perspective, using 'I,' 'me,' and 'my.'  Specifically, you should:  * Identify key skills: Extract the core skills demonstrated by the tasks (e.g., coding, problem-solving, communication). * Make sure to explicitly mention and discuss the technologies or tools I used in each task. * Relate to new-grad context: Frame the impact in terms of how these skills and accomplishments are relevant to a new graduate starting their career. * Explain how these technologies helped me develop my skills or overcome challenges. * Focus on positive impact: Highlight the positive aspects of skill development and career progression. * Include a brief reflection on what I learned from these tasks or how they contributed to my development as a developer. * Maintain a concise and professional tone: The output should be suitable for a professional blog or portfolio.  Remember to keep the output concise, focused, and relevant to the provided tasks. Only output the exact text that will be in the blog post, no introductions, greetings, outros, or other pieces that will hinder the formatting.   Example: 'Today I utilized React to design the event management system for my portfolio website, this is great for helping me understand the fundamentals of event driven web design, while polishing skills in Javascript and Backend tools!'  Here is the list of tasks: {{ $json.data }}\",\n  \"stream\": false\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        220,
+        180
+      ],
+      "id": "2270fb88-29ac-4ede-b411-a4cd6d4d9eaa",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.dateTime",
+      "typeVersion": 2,
+      "position": [
+        -280,
+        -20
+      ],
+      "id": "c24b90ea-4518-4369-b617-2595d979177d",
+      "name": "Date & Time"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [
+        620,
+        0
+      ],
+      "id": "4fd3a283-48be-412f-842f-b532f652e540",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "jsCode": "const currentDate = $input.all()[0].json.currentDate; // Assuming the date is in the first item of the input\n\nif (currentDate) {\n  const date = new Date(currentDate);\n  const month = String(date.getMonth() + 1).padStart(2, '0'); // Months are 0-indexed\n  const day = String(date.getDate()).padStart(2, '0');\n  const year = date.getFullYear();\n\n  const formattedDate = `${month}-${day}-${year}`;\n  return [{ formattedDate: formattedDate }];\n} else {\n  return [{ formattedDate: \"Date not found\" }];\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -100,
+        -20
+      ],
+      "id": "20243217-741e-489c-b090-b4f49480b24b",
+      "name": "Format Date MM-DD-YYYY"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extract the input data\nconst inputData = $input.all();\n\n// Extract the response content from the JSON response\nlet responseContent = $input.all()[0].json.response;\n\n// Remove the <think> section using a regular expression\nresponseContent = responseContent.replace(/<think>[\\s\\S]*?<\\/think>/, '');\n\n// Replace \"```\" with \"\" to adjust heading levels (if applicable)\nresponseContent = responseContent.replace(/```/g, '');\n\n// Cleaned content - remove extra newlines and trim\nlet cleanedContent = responseContent.replace(/\\n{2,}/g, '\\n').trim();\n\n// Add a newline BEFORE the list item marker and preceding text\ncleanedContent = cleanedContent.replace(/(\\n|^)([^\\n])/g, '$1\\n$2');\n\n// Remove extra newlines again\ncleanedContent = cleanedContent.replace(/\\n{2,}/g, '\\n');\n\n// Set the cleaned content as the output\nreturn [{ json: { cleanedContent } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        440,
+        180
+      ],
+      "id": "e837f2f2-79ee-4823-8b8d-495cb1e60029",
+      "name": "Parse and Clean LLM Response"
+    },
+    {
+      "parameters": {
+        "triggerOn": "folder",
+        "path": "C:\\WorkflowData\\InsertBlogPost",
+        "events": [
+          "add"
+        ],
+        "options": {}
+      },
+      "type": "n8n-nodes-base.localFileTrigger",
+      "typeVersion": 1,
+      "position": [
+        -900,
+        180
+      ],
+      "id": "fd61eb48-9e50-456a-a4cc-a4c4d7380aa6",
+      "name": "Start When File Is Uploaded"
+    },
+    {
+      "parameters": {
+        "fileSelector": "={{ $json.path }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1,
+      "position": [
+        -280,
+        180
+      ],
+      "id": "6eb05356-2598-4526-b968-12470fbf80dd",
+      "name": "Extract data",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "operation": "text",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1,
+      "position": [
+        -140,
+        180
+      ],
+      "id": "4f1b1d6d-b793-421c-9055-93227a4c28c1",
+      "name": "Convert To Text"
+    },
+    {
+      "parameters": {
+        "jsCode": "const inputData = $input.all()[0].json.data;\n\n// 1. Replace newlines with commas ONLY if a comma is not already present on the SAME LINE\nlet cleanedData = inputData.replace(/([\\r\\n]+)(?!.*,)/g, ','); \n\n// 2. Remove any remaining newlines (cases where a comma was already present)\ncleanedData = cleanedData.replace(/[\\r\\n]+/g, ''); \n\n// 3. Remove extra spaces (leading, trailing, and multiple spaces)\ncleanedData = cleanedData.trim().replace(/\\s+/g, ' ');\n\n// 4. (Optional) Remove other unwanted characters. Add more to the regex if needed.\ncleanedData = cleanedData.replace(/[^\\w\\s,]/gi, ''); // Keeps letters, numbers, spaces, and commas\n\n// Set the cleaned data as the output\nreturn [{ data: cleanedData }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        40,
+        180
+      ],
+      "id": "f7af4374-fc14-4640-906a-d58aafa583a6",
+      "name": "Clean Text"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "return {\n  path: $json.path.replace(/\\\\/g, \"/\")\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -420,
+        180
+      ],
+      "id": "8152c7ce-8121-47cf-8895-79df69a7015c",
+      "name": "Reformat Path"
+    },
+    {
+      "parameters": {
+        "jsCode": "const mergedData = $input.all()[0].json; // Access the first input item\nconst formattedDate = mergedData.formattedDate;\nconst blogContent = mergedData.cleanedContent;\n\nlet html = `${formattedDate} \\n ${blogContent}`;\n\nreturn [{ json: { data: html } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        760,
+        0
+      ],
+      "id": "68c0e4f5-2abc-4bf2-9862-b1c856ef3e51",
+      "name": "Generate Markdown"
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "sendAndWait",
+        "guildId": {
+          "__rl": true,
+          "value": "1347014115893448804",
+          "mode": "list",
+          "cachedResultName": "My80vette's Server",
+          "cachedResultUrl": "https://discord.com/channels/1347014115893448804"
+        },
+        "channelId": {
+          "__rl": true,
+          "value": "1347014161275686943",
+          "mode": "list",
+          "cachedResultName": "blog-creation-bot",
+          "cachedResultUrl": "https://discord.com/channels/1347014115893448804/1347014161275686943"
+        },
+        "message": "={{ $json.data }}",
+        "approvalOptions": {
+          "values": {
+            "approvalType": "double"
+          }
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.discord",
+      "typeVersion": 2,
+      "position": [
+        960,
+        180
+      ],
+      "id": "0aa12499-d141-40d9-8575-1a0fed7117be",
+      "name": "Discord",
+      "webhookId": "fabee534-189d-46a3-9047-03cd56483461",
+      "credentials": {
+        "discordBotApi": {
+          "id": "w4QS4GshjEkeXUV6",
+          "name": "Discord Bot account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "d3867c7c-dc40-4350-b823-f351b84af510",
+              "leftValue": "={{ $json.data.approved }}",
+              "rightValue": "true",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1240,
+        340
+      ],
+      "id": "96c946ef-c749-4f90-b81c-7ed25cbd5fdd",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "mode": "chooseBranch"
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [
+        1480,
+        40
+      ],
+      "id": "66b1975e-363f-45eb-99a1-6f2f88daaa08",
+      "name": "Merge1"
+    },
+    {
+      "parameters": {
+        "mode": "chooseBranch"
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [
+        -900,
+        380
+      ],
+      "id": "7ab7acb4-31b4-4bf9-b455-32756fa8e297",
+      "name": "Merge2"
+    },
+    {
+      "parameters": {
+        "operation": "insert",
+        "collection": "blog_post",
+        "fields": "={{ $json.data }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mongoDb",
+      "typeVersion": 1.1,
+      "position": [
+        1580,
+        40
+      ],
+      "id": "68bfadf9-018a-47a4-bb5f-770bf0226ce7",
+      "name": "MongoDB",
+      "credentials": {
+        "mongoDb": {
+          "id": "KOY6W6kn0ufF6t0n",
+          "name": "n8n_workflow_connection"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "# Here is where we append todays date to the post\n* When we detect a file has been uploaded to the folder, we will generate todays date, and append it to the rest of the post before we generate the markdown and send the post to discord for approval.",
+        "height": 300,
+        "width": 1180,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -460,
+        -140
+      ],
+      "id": "28973d67-9480-433c-be0a-2ab87bfa6b3c",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "content": "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n# This exist to pass messages to the LLM and clean the responses\n* This logic will reformat the path of the folder we are monitoring so we can get the path to the object inserted\n* We will then go to that path, extract the text, and clean it to make it easy to pass as a JSON object to our model\n* Then we pass the model the prompt, with prompt engineering instructions to format its response\n* Currently we are using **Phi4 - Microsoft** but we can change the model with a simple edit to the HTTP request, one of the reasons we use Ollama!\n* We will then parse and clean the LLM response, removing special characters, and separating the response from the \"thinking\" if we are using a reasoning model",
+        "height": 460,
+        "width": 1180
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -460,
+        120
+      ],
+      "id": "80923aec-ca57-4416-bf81-0668641113b0",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "content": "# Human-in-the-loop capabilities\n\n*Currently through Discord, can modify as needed\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n* We send the blog post to Discord through a simple bot to our private server.\n* We can then read the post, and approve to send it to storage, or decline.\n* Once declined, we will resend the original HTTP request to re-generate.",
+        "height": 720,
+        "width": 680,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        720,
+        -140
+      ],
+      "id": "38d6ab9e-2de5-4abb-b30b-c7b5a3a1d47c",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "content": "## 1.) Trigger on document Upload\n\n## 2.) Logic to regenerate poor responses",
+        "height": 720,
+        "width": 500,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -960,
+        -140
+      ],
+      "id": "36841ba0-a2fa-42df-8484-fe633e7f5ab0",
+      "name": "Sticky Note3"
+    },
+    {
+      "parameters": {
+        "content": "# Storage\n\n*Utilizing a local MongoDB database to store unstructured data, allowing me to store ALL n8n outputs from my various workflows in 1 place, making it easy to integrate with my portfolio",
+        "height": 720,
+        "width": 400
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1400,
+        -140
+      ],
+      "id": "52c651a1-cee0-41f1-853a-9a755c1cb017",
+      "name": "Sticky Note4"
+    },
+    {
+      "parameters": {
+        "content": "# Completely localized blog generation platform with modular LLM integration",
+        "height": 80,
+        "width": 1360,
+        "color": 2
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -280,
+        -220
+      ],
+      "id": "ebc59e79-34a0-484c-9399-83a329ab2aac",
+      "name": "Sticky Note5"
+    },
+    {
+      "parameters": {
+        "content": "## Future Updates / Still working on:\n* Sometimes the regeneration logic crashes out after 2-3 loops, thought I fixed it by switching from the /chat/generations endpoint to the /generations endpoint, need to see whats happening under the hood with ollama\n* Sometimes 1 file upload will lead to 2 separate Discord blogs to approve, not sure how 2 responses are being generated, much less processed merged with dates, and sent for approval\n* If I had 15 mins of patience before diving into my first workflow, I would have noticed the Ollama node, making that whole middle block useless, maybe we can make a 2nd version later to compare : )\n* I need another workflow to go from the MongoDB to my portfolio site, then a workflow to manage my workflows, this is so much fun, I wish I could build as fast as I think!",
+        "height": 140,
+        "width": 1860,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -460,
+        580
+      ],
+      "id": "21b167e7-ac75-42e1-804d-f78f2ac92c99",
+      "name": "Sticky Note6"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Parse and Clean LLM Response",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Date & Time": {
+      "main": [
+        [
+          {
+            "node": "Format Date MM-DD-YYYY",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Generate Markdown",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Date MM-DD-YYYY": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse and Clean LLM Response": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Start When File Is Uploaded": {
+      "main": [
+        [
+          {
+            "node": "Date & Time",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Reformat Path",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract data": {
+      "main": [
+        [
+          {
+            "node": "Convert To Text",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Convert To Text": {
+      "main": [
+        [
+          {
+            "node": "Clean Text",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Clean Text": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reformat Path": {
+      "main": [
+        [
+          {
+            "node": "Extract data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Markdown": {
+      "main": [
+        [
+          {
+            "node": "Discord",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Discord": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 1
+          }
+        ],
+        [
+          {
+            "node": "Merge2",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge1": {
+      "main": [
+        [
+          {
+            "node": "MongoDB",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge2": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Date & Time",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "MongoDB": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "7e2a85e6-4cec-4e03-8886-7318b582c922",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "0a9880b8708bcaf14a415dd50473eb8de8391617b00874d49ce06982dab09211"
+  },
+  "id": "tocfsKv6FvLpjWBR",
+  "tags": []
+}
